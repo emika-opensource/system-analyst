@@ -225,3 +225,45 @@ When a new user opens the dashboard for the first time, they see:
 | SKILL.md | 8/10 | Comprehensive, minor gaps |
 
 **Bottom line:** The product looks great and has real depth (8 templates, BM25 search, edge case tracking, export). But a new user opening it for the first time sees a wall of zeros and has to figure out the mental model alone. The #1 priority is a first-run experience that gets someone to a populated spec in under 60 seconds. After that, fix error handling so the app doesn't silently break.
+
+---
+
+## Fixes Applied
+
+**Date:** 2026-02-11
+
+### Critical (All Done)
+1. **✅ First-run welcome wizard** — Detects empty state (0 specs, 0 docs) and shows a 3-path wizard: "Start from template", "Start blank", "Upload docs first". Also added a "Quick Start from Template" card section on the dashboard showing top 4 templates.
+2. **✅ Fixed `api()` error handling** — Now checks `res.ok`, throws on non-2xx, catches network errors. All errors are displayed via toast notifications. Every render function wrapped in try/catch with retry UI on failure.
+3. **✅ Added loading states** — `showLoading()` displays a spinner in the content area while any page loads. CSS spinner animation added.
+4. **✅ Auto-expand and auto-edit empty sections** — `toggleSection()` now detects empty content and automatically sets edit mode when expanding.
+
+### High Impact (All Done)
+5. **✅ Replaced all `prompt()` calls with proper modals** — New `promptModal()` async function with styled input, Cancel/OK buttons, Enter/Escape key support. Used for: Add Section, Rename Section, Add Edge Case, Use Template title.
+6. **✅ Replaced all `alert()` calls with toast notifications** — New toast system (`toast()`) with 4 types (success/error/warning/info), auto-dismiss, slide-in animation. Settings save, CRUD operations, uploads all use toasts.
+7. **✅ Replaced all `confirm()` calls with styled modals** — New `confirmModal()` async function for: Delete Spec, Delete Section, Delete Document, Delete Project, Delete Link.
+8. **✅ Added autosave indicator** — Shows "Saving..." (yellow), "Saved ✓" (green), or "Save failed" (red) next to the section editor during debounce-save.
+9. **✅ Added XSS protection** — Added DOMPurify via CDN. `renderMd()` now runs `DOMPurify.sanitize(marked.parse(...))`.
+10. **✅ Added "Quick Start from Template" to dashboard** — Top 4 templates displayed as clickable cards directly on the dashboard.
+
+### Medium Impact (All Done)
+11. **✅ Fixed non-functional drag handles** — Replaced grip icon with functional up/down reorder buttons that swap section order via API calls. Buttons disable at boundaries.
+12. **✅ Added multer file size limit** — 50MB max file size for uploads.
+13. **✅ Fixed SPA fallback to exclude `/api/*` routes** — Added `app.all('/api/*')` 404 handler before SPA catch-all. Mistyped API URLs now return JSON 404 instead of HTML.
+14. **✅ Added toast notifications for all CRUD operations** — Create, update, delete for specs, sections, edge cases, review notes, documents, links, projects, and settings all show toast feedback.
+15. **✅ Consolidated TOOLS.md** — Reduced to a slim quick-reference table pointing to SKILL.md for full details. Added error handling guidance.
+16. **✅ Compressed BOOTSTRAP.md** — Reduced from 6 sections to 3 questions + brief "How I Work". Mentions templates as the fast path.
+17. **✅ Removed duplicate version badge + input** — Spec detail now shows only the editable version input and the status dropdown (removed the redundant static badges next to them).
+
+### Lower Impact (Done)
+18. **✅ Added keyboard shortcuts** — `Ctrl+N` for new spec (when not in input), `Escape` to close modals.
+19. **✅ Empty state improvements** — Knowledge base search shows helpful placeholder text. Edge cases list shows message when filter returns 0. Documents, links pages show empty states. Open edge cases on dashboard shows contextual message when no specs exist.
+20. **✅ Upload Document quick action fixed** — Now navigates to #knowledge instead of being a plain anchor, ensuring consistent behavior.
+
+### Summary of Changes
+- **server.js**: Added multer 50MB limit, added `/api/*` 404 catch-all before SPA fallback
+- **public/app.js**: Complete rewrite of error handling, added toast system, modal system (promptModal/confirmModal), loading states, welcome wizard, autosave indicator, section reorder buttons, keyboard shortcuts, XSS-safe markdown rendering, empty states
+- **public/style.css**: Added styles for toast notifications, loading spinner, autosave indicator, wizard options, reorder buttons
+- **public/index.html**: Added DOMPurify CDN script
+- **BOOTSTRAP.md**: Compressed from ~50 lines to ~15 lines, 3 questions max
+- **skill/TOOLS.md**: Consolidated to slim reference, removed duplication with SKILL.md
