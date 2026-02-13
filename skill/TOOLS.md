@@ -2,6 +2,16 @@
 
 > Full API details and methodology are in SKILL.md. This file covers quick reference only.
 
+## ⚠️ IMPORTANT: Spec Hub App
+
+Your **Spec Hub** web application is ALREADY RUNNING on port 3000. It starts automatically via `start.sh`.
+
+- **DO NOT** kill anything on port 3000 — that's YOUR app
+- **DO NOT** try to start a new server on port 3000
+- The app is accessible to the user via the browser panel (iframe)
+- All API endpoints below are served by this app at `http://localhost:3000`
+- If you need to build something for the user, deploy it on a DIFFERENT port using PM2
+
 ## API Quick Reference
 
 | Resource | Endpoints |
