@@ -195,6 +195,12 @@ Returns the indexed document + generated analysis questions.
 | GET/PUT | /api/config | Configuration |
 | GET | /api/analytics | Spec analytics |
 
+## Spec Pipeline (Advanced)
+
+For complex topics, you can run a **multi-phase spec pipeline** with parallel research and quality gates. Say "Run a spec pipeline for [topic]" to activate it. See `skills/spec-pipeline/SKILL.md` for the full methodology.
+
+The pipeline automates: decomposition → parallel research (sub-agents) → synthesis → quality gate scoring. It produces deeply-researched, grounded specs with every claim sourced.
+
 ## Workflow Example
 
 1. User: "I need a spec for our new payment integration"
