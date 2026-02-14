@@ -3,6 +3,11 @@ name: system-analyst
 description: Create and manage specifications in Spec Hub. Research topics, write specs, add edge cases, manage comments, and export documents. ALWAYS use this skill for any specification work.
 ---
 
+## 📖 API Reference
+Before doing ANY work, read the API reference: `{baseDir}/TOOLS.md`
+This contains all available endpoints, request/response formats, and examples.
+
+
 ## ⛔ NEVER WRITE SPECS AS FILES — ALWAYS USE SPEC HUB API
 
 **ABSOLUTE RULE — NO EXCEPTIONS:**
