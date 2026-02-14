@@ -1,12 +1,16 @@
 /* ─── Spec Hub — Kanban + Fullscreen Editor ──────────────────────────────── */
 
 const API = '';
-const STATUSES = [
+const DEFAULT_STATUSES = [
   { key: 'draft', label: 'Draft' },
   { key: 'review', label: 'In Review' },
   { key: 'approved', label: 'Approved' },
   { key: 'archived', label: 'Archived' }
 ];
+
+function getStatuses() {
+  return (state.config.statuses && state.config.statuses.length) ? state.config.statuses : DEFAULT_STATUSES;
+}
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -98,8 +102,9 @@ function timeAgo(dateStr) {
 }
 
 function statusLabel(s) {
-  const m = { draft: 'Draft', review: 'In Review', approved: 'Approved', archived: 'Archived' };
-  return m[s] || s;
+  const statuses = getStatuses();
+  const found = statuses.find(st => st.key === s);
+  return found ? found.label : s;
 }
 
 function statusBadgeClass(s) {
@@ -235,7 +240,7 @@ function renderKanbanTopbar() {
 
 function renderKanban() {
   const board = el('div', { className: 'kanban' });
-  for (const status of STATUSES) {
+  for (const status of getStatuses()) {
     const specs = state.specs.filter(s => s.status === status.key);
     const col = el('div', { className: 'kanban-column' });
 
@@ -243,7 +248,13 @@ function renderKanban() {
       el('div', { className: 'kanban-column-title' },
         statusLabel(status.key),
         el('span', { className: 'kanban-column-count' }, String(specs.length))
-      )
+      ),
+      el('button', {
+        className: 'btn-icon btn-icon-sm',
+        innerHTML: icons.plus,
+        title: `New spec in ${status.label}`,
+        onClick: () => showNewSpecModal(status.key)
+      })
     );
     col.appendChild(header);
 
@@ -319,7 +330,7 @@ function renderKanbanCard(spec) {
 
 // ─── New Spec Modal ─────────────────────────────────────────────────────────
 
-function showNewSpecModal() {
+function showNewSpecModal(defaultStatus = 'draft') {
   const overlay = el('div', { className: 'modal-overlay' });
   const modal = el('div', { className: 'modal' });
   modal.appendChild(el('h2', null, 'New Specification'));
@@ -342,7 +353,7 @@ function showNewSpecModal() {
         if (!title) { toast('Title is required', 'error'); return; }
         const desc = document.getElementById('new-spec-desc').value.trim();
         try {
-          const spec = await api('POST', '/api/specs', { title, description: desc });
+          const spec = await api('POST', '/api/specs', { title, description: desc, status: defaultStatus });
           overlay.remove();
           await loadSpecs();
           openEditor(spec.id);
@@ -465,7 +476,7 @@ function renderStatusSelect(spec) {
   });
 
   const dropdown = el('div', { className: 'custom-select-dropdown' });
-  for (const s of STATUSES) {
+  for (const s of getStatuses()) {
     const opt = el('div', {
       className: `custom-select-option${spec.status === s.key ? ' selected' : ''}`,
       onClick: async () => {
@@ -1132,6 +1143,88 @@ function renderSettings() {
   }, 'Save');
   appearance.appendChild(saveAppearance);
   view.appendChild(appearance);
+
+  // Stages card
+  const stagesCard = el('div', { className: 'settings-card' });
+  stagesCard.appendChild(el('h3', null, 'Pipeline Stages'));
+  stagesCard.appendChild(el('p', { className: 'settings-desc' }, 'Customize the Kanban board columns. Drag to reorder. Existing specs will keep their status.'));
+
+  const stagesList = el('div', { className: 'stages-list', id: 'stages-list' });
+  const currentStatuses = [...getStatuses()];
+
+  function renderStagesList() {
+    stagesList.innerHTML = '';
+    currentStatuses.forEach((s, i) => {
+      const row = el('div', { className: 'stage-row', draggable: 'true' });
+      row.dataset.index = i;
+
+      row.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', String(i));
+        row.classList.add('dragging');
+      });
+      row.addEventListener('dragend', () => row.classList.remove('dragging'));
+      row.addEventListener('dragover', (e) => { e.preventDefault(); row.classList.add('drag-over'); });
+      row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+      row.addEventListener('drop', (e) => {
+        e.preventDefault();
+        row.classList.remove('drag-over');
+        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+        const toIdx = i;
+        if (fromIdx === toIdx) return;
+        const [moved] = currentStatuses.splice(fromIdx, 1);
+        currentStatuses.splice(toIdx, 0, moved);
+        renderStagesList();
+      });
+
+      const grip = el('span', { className: 'stage-grip', innerHTML: '⠿' });
+      const keyInput = el('input', { className: 'stage-key-input', value: s.key, placeholder: 'key' });
+      keyInput.addEventListener('input', () => { currentStatuses[i].key = keyInput.value.trim().toLowerCase().replace(/\s+/g, '_'); });
+      const labelInput = el('input', { className: 'stage-label-input', value: s.label, placeholder: 'Label' });
+      labelInput.addEventListener('input', () => { currentStatuses[i].label = labelInput.value; });
+      const removeBtn = el('button', {
+        className: 'btn-icon btn-icon-sm btn-danger-icon',
+        innerHTML: icons.trash,
+        onClick: () => { currentStatuses.splice(i, 1); renderStagesList(); }
+      });
+
+      row.appendChild(grip);
+      row.appendChild(keyInput);
+      row.appendChild(labelInput);
+      row.appendChild(removeBtn);
+      stagesList.appendChild(row);
+    });
+  }
+  renderStagesList();
+  stagesCard.appendChild(stagesList);
+
+  const addStageBtn = el('button', {
+    className: 'btn btn-sm',
+    innerHTML: icons.plus + ' Add Stage',
+    onClick: () => {
+      const key = 'stage_' + (currentStatuses.length + 1);
+      currentStatuses.push({ key, label: 'New Stage' });
+      renderStagesList();
+    }
+  });
+  stagesCard.appendChild(addStageBtn);
+
+  const saveStages = el('button', {
+    className: 'btn btn-primary',
+    style: { marginTop: '12px', marginLeft: '8px' },
+    onClick: async () => {
+      const valid = currentStatuses.every(s => s.key && s.label);
+      if (!valid) { toast('All stages need a key and label', 'error'); return; }
+      const uniqueKeys = new Set(currentStatuses.map(s => s.key));
+      if (uniqueKeys.size !== currentStatuses.length) { toast('Stage keys must be unique', 'error'); return; }
+      try {
+        state.config = await api('PUT', '/api/config', { statuses: currentStatuses });
+        toast('Stages saved', 'success');
+        render();
+      } catch { toast('Failed to save stages', 'error'); }
+    }
+  }, 'Save Stages');
+  stagesCard.appendChild(saveStages);
+  view.appendChild(stagesCard);
 
   // PIN Protection card
   const pinCard = el('div', { className: 'settings-card' });
