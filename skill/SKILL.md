@@ -133,6 +133,16 @@ curl -X POST http://localhost:3000/api/specs/:id/edge-cases \
   }'
 ```
 
+## Shareable Links
+
+Every spec has a shareable public URL at `/view/:id`. When you finish creating or updating a specification, ALWAYS share the link with the user so they can view it directly:
+
+```
+Here's your spec: /view/{spec_id}
+```
+
+The shareable link renders a beautiful standalone page with the full spec content, edge cases, and metadata — no login required.
+
 ## Workflow Example
 
 1. User: "I need a spec for our new payment integration"
@@ -142,6 +152,6 @@ curl -X POST http://localhost:3000/api/specs/:id/edge-cases \
 5. You: Write the full markdown content covering all sections
 6. You: Add edge cases for each concern
 7. You: Self-review, address edge cases
-8. You: Present to user for feedback
-9. You: Address all edge cases before marking approved
-10. You: Export in requested format
+8. You: **Share the link**: "Here's your spec: /view/{id} — you can also see it on the Kanban board."
+9. You: Present to user for feedback
+10. You: Address all edge cases before marking approved

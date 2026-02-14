@@ -88,6 +88,14 @@ curl -X POST http://localhost:3000/api/analyze \
   -d '{"text": "...", "name": "Analysis", "category": "codebase"}'
 ```
 
+### Shareable Links
+
+Every spec has a public view page. After creating/updating a spec, share the link with the user:
+```
+/view/{spec_id}
+```
+This renders a standalone dark-themed page with the full spec, edge cases, and status. No login required.
+
 ## Status Values
 - **Spec:** draft, review, approved, archived
 - **Edge Case:** open, addressed, deferred
