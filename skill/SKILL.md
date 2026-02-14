@@ -135,13 +135,17 @@ curl -X POST http://localhost:3000/api/specs/:id/edge-cases \
 
 ## Shareable Links
 
-Every spec has a shareable public URL at `/view/:id`. When you finish creating or updating a specification, ALWAYS share the link with the user so they can view it directly:
+Every spec has a shareable public URL. When you finish creating or updating a specification, ALWAYS share the **full URL** with the user so they can view it directly.
+
+To construct the full URL, use the `<server_url>` from your system message (e.g. `https://XXXX-XXXX.emika.io`):
 
 ```
-Here's your spec: /view/{spec_id}
+Here's your spec: https://XXXX-XXXX.emika.io/view/{spec_id}
 ```
 
-The shareable link renders a beautiful standalone page with the full spec content, edge cases, and metadata — no login required.
+**NEVER share just `/view/{id}`** — always include the full `https://...emika.io/view/{id}` URL.
+
+The shareable link renders a beautiful standalone page with the full spec content, edge cases, comments, and metadata — no login required.
 
 ## Workflow Example
 

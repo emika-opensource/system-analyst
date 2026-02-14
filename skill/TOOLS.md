@@ -125,11 +125,13 @@ curl -X POST http://localhost:3000/api/analyze \
 
 ### Shareable Links
 
-Every spec has a public view page. After creating/updating a spec, share the link with the user:
+Every spec has a public view page. After creating/updating a spec, share the **full URL** with the user:
 ```
-/view/{spec_id}
+https://XXXX-XXXX.emika.io/view/{spec_id}
 ```
-This renders a standalone dark-themed page with the full spec, edge cases, and status. No login required.
+Use the `<server_url>` from your system message to construct the full URL. **NEVER share just `/view/{id}`**.
+
+This renders a standalone dark-themed page with the full spec, edge cases, comments, and status. No login required.
 
 ## Status Values
 - **Spec:** draft, review, approved, archived
