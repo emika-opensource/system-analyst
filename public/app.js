@@ -389,6 +389,20 @@ function renderEditor() {
 
   view.appendChild(topbar);
 
+  // Description (editable)
+  const descInput = el('textarea', {
+    className: 'editor-desc-input',
+    value: spec.description || '',
+    placeholder: 'Add a brief description...',
+    rows: '2'
+  });
+  descInput.value = spec.description || '';
+  descInput.addEventListener('input', () => {
+    spec.description = descInput.value;
+    autoSave();
+  });
+  view.appendChild(descInput);
+
   // Tabs
   const tabs = el('div', { className: 'editor-tabs' });
   for (const tab of [
@@ -710,6 +724,34 @@ async function cycleEcStatus(ec) {
 function renderExport() {
   const panel = el('div', { className: 'export-panel' });
   const spec = state.editingSpec;
+
+  // Shareable link section
+  const shareUrl = `${location.origin}/view/${spec.id}`;
+  const shareSection = el('div', { className: 'export-share' });
+  shareSection.appendChild(el('h3', null, 'Shareable Link'));
+  shareSection.appendChild(el('p', { style: { color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '10px' } }, 'Anyone with this link can view the spec.'));
+  const shareRow = el('div', { className: 'share-link-row' });
+  const shareInput = el('input', {
+    className: 'share-link-input',
+    value: shareUrl,
+    readOnly: 'true'
+  });
+  const copyBtn = el('button', {
+    className: 'btn btn-primary btn-sm',
+    onClick: () => {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+      });
+    }
+  }, 'Copy');
+  shareRow.appendChild(shareInput);
+  shareRow.appendChild(copyBtn);
+  shareSection.appendChild(shareRow);
+  panel.appendChild(shareSection);
+
+  // Download section
+  panel.appendChild(el('h3', { style: { marginTop: '24px', marginBottom: '12px' } }, 'Download'));
   const formats = [
     { fmt: 'md', name: 'Markdown', desc: 'Raw .md file', icon: icons.fileText },
     { fmt: 'html', name: 'HTML', desc: 'Styled HTML document', icon: icons.globe },

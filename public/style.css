@@ -381,6 +381,52 @@ body {
   background: var(--surface2);
 }
 
+.editor-desc-input {
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  margin-bottom: 8px;
+}
+.editor-desc-input:hover { border-color: var(--border); }
+.editor-desc-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface2);
+  color: var(--text);
+}
+.editor-desc-input::placeholder { color: var(--text-dim); }
+
+.export-share {
+  margin-bottom: 8px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.export-share h3 { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.share-link-row {
+  display: flex;
+  gap: 8px;
+}
+.share-link-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+.share-link-input:focus { outline: none; border-color: var(--accent); }
+
 .version-badge {
   font-size: 11px;
   padding: 3px 10px;
