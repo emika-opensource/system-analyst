@@ -1136,7 +1136,7 @@ function renderSettings() {
   // PIN Protection card
   const pinCard = el('div', { className: 'settings-card' });
   pinCard.appendChild(el('h3', null, 'PIN Protection'));
-  pinCard.appendChild(el('p', { className: 'settings-desc' }, 'Require a 4-digit PIN to access Spec Hub. Anyone with the link will need the PIN.'));
+  pinCard.appendChild(el('p', { className: 'settings-desc' }, 'Require a 4-digit PIN to access Spec Hub. Shareable spec links (/view/...) will remain public and won\'t require a PIN.'));
 
   const pinStatus = el('div', { className: 'pin-status' });
   if (state.config.pinEnabled) {
