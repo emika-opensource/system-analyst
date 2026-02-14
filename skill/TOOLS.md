@@ -18,13 +18,13 @@ Your **Spec Hub** web application is ALREADY RUNNING on port 3000. It starts aut
 
 | Resource | Endpoints |
 |----------|-----------|
-| Specs | `GET/POST /api/specs`, `GET/PUT/DELETE /api/specs/:id` |
-| Edge Cases | `POST /api/specs/:id/edge-cases`, `PUT/DELETE /api/specs/:id/edge-cases/:eid` |
-| Export | `GET /api/specs/:id/export/(md\|html\|pdf)` |
-| Documents | `GET/POST/DELETE /api/documents`, `GET /api/documents/:id` |
+| Specs | `GET /api/specs`, `POST /api/specs`, `GET /api/specs/:id`, `PUT /api/specs/:id`, `DELETE /api/specs/:id` |
+| Edge Cases | `POST /api/specs/:id/edge-cases`, `PUT /api/specs/:id/edge-cases/:caseId`, `DELETE /api/specs/:id/edge-cases/:caseId` |
+| Export | `GET /api/specs/:id/export/md`, `GET /api/specs/:id/export/html`, `GET /api/specs/:id/export/pdf` |
+| Documents | `GET /api/documents`, `GET /api/documents/:id`, `POST /api/documents` (multipart), `DELETE /api/documents/:id` |
 | Search | `GET /api/search?q=...&limit=10` |
 | Analyze | `POST /api/analyze` |
-| Links | `GET/POST/DELETE /api/links` |
+| Links | `GET /api/links`, `POST /api/links`, `DELETE /api/links/:id` |
 
 ### Spec Object
 
