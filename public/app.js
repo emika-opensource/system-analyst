@@ -11,7 +11,7 @@ const STATUSES = [
 // ─── State ──────────────────────────────────────────────────────────────────
 
 const state = {
-  view: 'kanban',        // kanban | editor | kb | links
+  view: 'kanban',        // kanban | editor | kb | links | settings
   specs: [],
   documents: [],
   links: [],
@@ -20,7 +20,8 @@ const state = {
   editorTab: 'content',  // content | edgecases | export
   editorMode: 'edit',    // edit | preview | split
   saveTimer: null,
-  saveStatus: ''
+  saveStatus: '',
+  config: {}
 };
 
 // ─── Icons (SVG strings) ────────────────────────────────────────────────────
@@ -39,6 +40,9 @@ const icons = {
   fileText: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
   globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
   alertCircle: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
+  lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
+  shield: '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
   clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
   download: '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
   code: '<svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
@@ -150,13 +154,31 @@ function renderSidebar() {
     navItem('links', icons.link, 'Links')
   );
 
+  const title = state.config.appTitle || 'Spec Hub';
+  const accentColor = state.config.accentColor || '#6366f1';
+
+  const logo = el('div', { className: 'sidebar-logo' });
+  const logoIcon = el('div', { className: 'sidebar-logo-icon', style: { background: accentColor } });
+  logoIcon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+  logo.appendChild(logoIcon);
+  logo.appendChild(el('div', { className: 'sidebar-logo-text' },
+    el('h1', null, title),
+    el('span', null, state.config.appSubtitle || 'Specification Manager')
+  ));
+
+  const settingsBtn = el('button', {
+    className: `nav-item settings-nav${state.view === 'settings' ? ' active' : ''}`,
+    innerHTML: icons.settings + '<span>Settings</span>',
+    onClick: () => { state.view = 'settings'; render(); }
+  });
+
   return el('aside', { className: 'sidebar' },
-    el('div', { className: 'sidebar-logo' },
-      el('h1', null, 'Spec Hub'),
-      el('span', null, 'Specification Manager')
-    ),
+    logo,
     nav,
-    el('div', { className: 'sidebar-footer' }, `${state.specs.length} specs`)
+    el('div', { className: 'sidebar-bottom' },
+      settingsBtn,
+      el('div', { className: 'sidebar-footer' }, `${state.specs.length} specs`)
+    )
   );
 }
 
@@ -181,6 +203,9 @@ function renderMain() {
   } else if (state.view === 'links') {
     main.appendChild(renderTopbar('Links'));
     main.appendChild(renderLinksView());
+  } else if (state.view === 'settings') {
+    main.appendChild(renderTopbar('Settings'));
+    main.appendChild(renderSettings());
   }
   return main;
 }
@@ -968,8 +993,233 @@ function renderLinksView() {
 
 // ─── Init ───────────────────────────────────────────────────────────────────
 
+// ─── PIN Protection ─────────────────────────────────────────────────────────
+
+async function checkPinLock() {
+  try {
+    const config = await api('GET', '/api/config');
+    state.config = config;
+    if (!config.pinEnabled) return false;
+    if (sessionStorage.getItem('spechub-pin-auth') === 'true') return false;
+
+    // Show lock screen, hide app
+    document.getElementById('pin-lock').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+
+    createPinInputs('pin-lock-inputs', async (entered) => {
+      try {
+        const result = await api('POST', '/api/verify-pin', { pin: entered });
+        if (result.success) {
+          sessionStorage.setItem('spechub-pin-auth', 'true');
+          document.getElementById('pin-lock').style.display = 'none';
+          document.getElementById('app').style.display = '';
+          startApp();
+        }
+      } catch {
+        document.getElementById('pin-lock-error').textContent = 'Wrong PIN';
+        document.querySelectorAll('#pin-lock-inputs .pin-digit').forEach(d => {
+          d.classList.add('error');
+          d.value = '';
+          setTimeout(() => d.classList.remove('error'), 400);
+        });
+        document.querySelector('#pin-lock-inputs .pin-digit').focus();
+      }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function createPinInputs(containerId, onComplete) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const inputs = [];
+  for (let i = 0; i < 4; i++) {
+    const input = document.createElement('input');
+    input.type = 'tel';
+    input.maxLength = 1;
+    input.className = 'pin-digit';
+    input.inputMode = 'numeric';
+    input.pattern = '[0-9]';
+    input.autocomplete = 'off';
+
+    input.addEventListener('input', (e) => {
+      const val = e.target.value.replace(/[^0-9]/g, '');
+      e.target.value = val;
+      if (val && i < 3) inputs[i + 1].focus();
+      const full = inputs.map(inp => inp.value).join('');
+      if (full.length === 4 && onComplete) onComplete(full);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && i > 0) {
+        inputs[i - 1].focus();
+        inputs[i - 1].value = '';
+      }
+    });
+
+    input.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '').slice(0, 4);
+      for (let j = 0; j < pasted.length && j < 4; j++) inputs[j].value = pasted[j];
+      if (pasted.length === 4 && onComplete) onComplete(pasted);
+      else if (pasted.length > 0) inputs[Math.min(pasted.length, 3)].focus();
+    });
+
+    inputs.push(input);
+    container.appendChild(input);
+  }
+  setTimeout(() => inputs[0].focus(), 100);
+}
+
+// ─── Settings View ──────────────────────────────────────────────────────────
+
+function renderSettings() {
+  const view = el('div', { className: 'settings-view' });
+
+  // Appearance card
+  const appearance = el('div', { className: 'settings-card' });
+  appearance.appendChild(el('h3', null, 'Appearance'));
+
+  const titleGroup = el('div', { className: 'settings-group' });
+  titleGroup.appendChild(el('label', null, 'App Title'));
+  const titleInput = el('input', { className: 'settings-input', value: state.config.appTitle || 'Spec Hub', placeholder: 'Spec Hub' });
+  titleGroup.appendChild(titleInput);
+  appearance.appendChild(titleGroup);
+
+  const subtitleGroup = el('div', { className: 'settings-group' });
+  subtitleGroup.appendChild(el('label', null, 'Subtitle'));
+  const subtitleInput = el('input', { className: 'settings-input', value: state.config.appSubtitle || '', placeholder: 'Specification Manager' });
+  subtitleGroup.appendChild(subtitleInput);
+  appearance.appendChild(subtitleGroup);
+
+  const colorGroup = el('div', { className: 'settings-group' });
+  colorGroup.appendChild(el('label', null, 'Accent Color'));
+  const colorRow = el('div', { className: 'color-row' });
+  const presetColors = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6'];
+  const currentColor = state.config.accentColor || '#6366f1';
+  for (const c of presetColors) {
+    const swatch = el('button', {
+      className: `color-swatch${c === currentColor ? ' active' : ''}`,
+      style: { background: c },
+      onClick: () => {
+        colorRow.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        swatch.classList.add('active');
+      }
+    });
+    colorRow.appendChild(swatch);
+  }
+  colorGroup.appendChild(colorRow);
+  appearance.appendChild(colorGroup);
+
+  const saveAppearance = el('button', {
+    className: 'btn btn-primary',
+    onClick: async () => {
+      const activeSwatch = colorRow.querySelector('.color-swatch.active');
+      const accentColor = activeSwatch ? activeSwatch.style.background : currentColor;
+      try {
+        state.config = await api('PUT', '/api/config', {
+          appTitle: titleInput.value.trim() || 'Spec Hub',
+          appSubtitle: subtitleInput.value.trim(),
+          accentColor: rgbToHex(accentColor)
+        });
+        applyAccentColor();
+        toast('Settings saved', 'success');
+        render();
+      } catch { toast('Failed to save', 'error'); }
+    }
+  }, 'Save');
+  appearance.appendChild(saveAppearance);
+  view.appendChild(appearance);
+
+  // PIN Protection card
+  const pinCard = el('div', { className: 'settings-card' });
+  pinCard.appendChild(el('h3', null, 'PIN Protection'));
+  pinCard.appendChild(el('p', { className: 'settings-desc' }, 'Require a 4-digit PIN to access Spec Hub. Anyone with the link will need the PIN.'));
+
+  const pinStatus = el('div', { className: 'pin-status' });
+  if (state.config.pinEnabled) {
+    pinStatus.appendChild(el('span', { className: 'pin-badge pin-badge-on' }, 'PIN Active'));
+    pinStatus.appendChild(el('span', { style: { color: 'var(--text-muted)', fontSize: '13px' } }, 'Change or disable below'));
+  } else {
+    pinStatus.appendChild(el('span', { className: 'pin-badge pin-badge-off' }, 'No PIN'));
+    pinStatus.appendChild(el('span', { style: { color: 'var(--text-muted)', fontSize: '13px' } }, 'Set a PIN to protect access'));
+  }
+  pinCard.appendChild(pinStatus);
+
+  const pinGroup = el('div', { className: 'settings-group' });
+  pinGroup.appendChild(el('label', null, 'Set 4-Digit PIN'));
+  const pinRow = el('div', { className: 'pin-input-row', id: 'pin-settings-inputs' });
+  pinGroup.appendChild(pinRow);
+  pinCard.appendChild(pinGroup);
+
+  const pinActions = el('div', { className: 'settings-actions' });
+  pinActions.appendChild(el('button', {
+    className: 'btn btn-primary',
+    onClick: async () => {
+      const inputs = document.querySelectorAll('#pin-settings-inputs .pin-digit');
+      const pin = Array.from(inputs).map(i => i.value).join('');
+      if (pin.length !== 4) {
+        inputs.forEach(i => { i.classList.add('error'); setTimeout(() => i.classList.remove('error'), 400); });
+        return;
+      }
+      try {
+        state.config = await api('PUT', '/api/config', { pin });
+        sessionStorage.setItem('spechub-pin-auth', 'true');
+        toast('PIN saved', 'success');
+        render();
+      } catch { toast('Failed to save PIN', 'error'); }
+    }
+  }, 'Save PIN'));
+
+  if (state.config.pinEnabled) {
+    pinActions.appendChild(el('button', {
+      className: 'btn btn-danger',
+      onClick: async () => {
+        try {
+          state.config = await api('PUT', '/api/config', { pin: null });
+          sessionStorage.removeItem('spechub-pin-auth');
+          toast('PIN disabled', 'success');
+          render();
+        } catch { toast('Failed to disable PIN', 'error'); }
+      }
+    }, 'Disable PIN'));
+  }
+  pinCard.appendChild(pinActions);
+  view.appendChild(pinCard);
+
+  // Create PIN inputs after DOM is ready
+  setTimeout(() => createPinInputs('pin-settings-inputs', null), 50);
+
+  return view;
+}
+
+function rgbToHex(color) {
+  if (color.startsWith('#')) return color;
+  const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (!match) return color;
+  return '#' + [match[1], match[2], match[3]].map(x => parseInt(x).toString(16).padStart(2, '0')).join('');
+}
+
+function applyAccentColor() {
+  const color = state.config.accentColor || '#6366f1';
+  document.documentElement.style.setProperty('--accent', color);
+}
+
+// ─── Init ───────────────────────────────────────────────────────────────────
+
+async function startApp() {
+  await Promise.all([loadSpecs(), loadDocuments(), loadLinks()]);
+  try {
+    state.config = await api('GET', '/api/config');
+    applyAccentColor();
+  } catch {}
+  render();
+}
+
 async function init() {
-  // Load marked from CDN
+  // Load marked from CDN if not already loaded
   if (typeof marked === 'undefined') {
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js';
@@ -977,8 +1227,10 @@ async function init() {
     await new Promise(r => script.onload = r);
   }
 
-  await Promise.all([loadSpecs(), loadDocuments(), loadLinks()]);
-  render();
+  const locked = await checkPinLock();
+  if (!locked) {
+    await startApp();
+  }
 }
 
 init();

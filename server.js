@@ -4,6 +4,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const multer = require('multer');
 const { marked } = require('marked');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -469,6 +470,66 @@ app.post('/api/analyze', (req, res) => {
 });
 
 // ─── API 404 ────────────────────────────────────────────────────────────────
+
+// ─── Config / Settings / PIN Protection ─────────────────────────────────────
+
+const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+
+function loadConfig() {
+  try { return fs.readJsonSync(CONFIG_FILE); } catch { return {}; }
+}
+function saveConfig(config) {
+  fs.writeJsonSync(CONFIG_FILE, config, { spaces: 2 });
+}
+
+app.get('/api/config', (req, res) => {
+  const config = loadConfig();
+  const { pin, pinHash, ...safeConfig } = config;
+  safeConfig.pinEnabled = !!(pin || pinHash);
+  res.json(safeConfig);
+});
+
+app.put('/api/config', (req, res) => {
+  const config = loadConfig();
+  const { pin, ...otherFields } = req.body;
+
+  if (pin !== undefined) {
+    if (pin === null) {
+      delete config.pin;
+      delete config.pinHash;
+    } else {
+      config.pinHash = crypto.createHash('sha256').update(pin).digest('hex');
+      delete config.pin;
+    }
+  }
+
+  Object.assign(config, otherFields);
+  for (const k of Object.keys(config)) {
+    if (config[k] === null) delete config[k];
+  }
+  saveConfig(config);
+  const { pin: _p, pinHash: _h, ...safeConfig } = config;
+  safeConfig.pinEnabled = !!config.pinHash;
+  res.json(safeConfig);
+});
+
+app.post('/api/verify-pin', (req, res) => {
+  const config = loadConfig();
+  const entered = req.body.pin;
+  if (!entered || typeof entered !== 'string') return res.status(400).json({ error: 'PIN required' });
+
+  const enteredHash = crypto.createHash('sha256').update(entered).digest('hex');
+  if (config.pinHash && enteredHash === config.pinHash) {
+    return res.json({ success: true });
+  }
+  if (config.pin && entered === config.pin) {
+    config.pinHash = enteredHash;
+    delete config.pin;
+    saveConfig(config);
+    return res.json({ success: true });
+  }
+  res.status(401).json({ success: false, error: 'Wrong PIN' });
+});
 
 app.all('/api/*', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found' });

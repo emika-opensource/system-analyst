@@ -65,18 +65,30 @@ body {
 .sidebar-logo {
   padding: 20px 16px 16px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.sidebar-logo h1 {
-  font-size: 16px;
+.sidebar-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sidebar-logo-text h1 {
+  font-size: 15px;
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.3px;
 }
-.sidebar-logo span {
+.sidebar-logo-text span {
   font-size: 11px;
   color: var(--text-muted);
   display: block;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .sidebar-nav {
@@ -122,9 +134,13 @@ body {
   stroke-linejoin: round;
 }
 
-.sidebar-footer {
-  padding: 12px 16px;
+.sidebar-bottom {
   border-top: 1px solid var(--border);
+  padding: 8px;
+}
+.sidebar-bottom .nav-item { margin-bottom: 0; }
+.sidebar-footer {
+  padding: 8px 12px;
   font-size: 11px;
   color: var(--text-dim);
 }
@@ -1056,3 +1072,134 @@ body {
 .text-center { text-align: center; }
 .mt-4 { margin-top: 16px; }
 .mb-4 { margin-bottom: 16px; }
+
+/* ─── PIN Lock Screen ──────────────────────────────────────────────────── */
+.pin-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pin-lock-card {
+  text-align: center;
+  padding: 40px;
+}
+.pin-input-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.pin-digit {
+  width: 48px;
+  height: 56px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  caret-color: var(--accent);
+  transition: border-color 0.12s;
+}
+.pin-digit:focus { outline: none; border-color: var(--accent); }
+.pin-digit.error { border-color: #ef4444; animation: shake 0.3s ease; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.pin-error {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 12px;
+  min-height: 18px;
+}
+
+/* ─── Settings View ────────────────────────────────────────────────────── */
+.settings-view {
+  padding: 24px;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.settings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.settings-card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 16px;
+}
+.settings-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.settings-group {
+  margin-bottom: 16px;
+}
+.settings-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.settings-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+}
+.settings-input:focus { outline: none; border-color: var(--accent); }
+.color-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.color-swatch:hover { transform: scale(1.1); }
+.color-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px currentColor; }
+.settings-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pin-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.pin-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+.pin-badge-on { background: rgba(34,197,94,0.15); color: #22c55e; }
+.pin-badge-off { background: rgba(136,136,152,0.1); color: var(--text-muted); }
