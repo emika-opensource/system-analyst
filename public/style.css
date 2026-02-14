@@ -1127,6 +1127,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow-y: auto;
+  flex: 1;
 }
 .settings-card {
   background: var(--surface);
