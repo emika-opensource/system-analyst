@@ -1,5 +1,7 @@
 # Tools Reference — System Analyst
 
+## ⛔ NEVER write specs as markdown files. ALWAYS use the Spec Hub API.
+
 ## CRITICAL: Port 3000 Only
 You MUST deploy ONLY on port 3000. Nginx ONLY proxies port 3000 — any other port will NOT be accessible.
 If port 3000 is busy: `pm2 delete all` then `pm2 start your-app.js --name app` on port 3000.
@@ -20,6 +22,7 @@ Your **Spec Hub** web application is ALREADY RUNNING on port 3000. It starts aut
 |----------|-----------|
 | Specs | `GET /api/specs`, `POST /api/specs`, `GET /api/specs/:id`, `PUT /api/specs/:id`, `DELETE /api/specs/:id` |
 | Edge Cases | `POST /api/specs/:id/edge-cases`, `PUT /api/specs/:id/edge-cases/:caseId`, `DELETE /api/specs/:id/edge-cases/:caseId` |
+| Comments | `GET /api/specs/:id/comments`, `POST /api/specs/:id/comments`, `PUT /api/specs/:id/comments/:commentId`, `DELETE /api/specs/:id/comments/:commentId` |
 | Export | `GET /api/specs/:id/export/md`, `GET /api/specs/:id/export/html`, `GET /api/specs/:id/export/pdf` |
 | Documents | `GET /api/documents`, `GET /api/documents/:id`, `POST /api/documents` (multipart), `DELETE /api/documents/:id` |
 | Search | `GET /api/search?q=...&limit=10` |
@@ -63,6 +66,38 @@ curl -X POST http://localhost:3000/api/specs \
 curl -X PUT http://localhost:3000/api/specs/:id \
   -H 'Content-Type: application/json' \
   -d '{"content": "# Updated...", "status": "review"}'
+```
+
+### Comment Object
+
+```json
+{
+  "id": "string",
+  "author": "string (default 'User')",
+  "text": "string",
+  "resolved": false,
+  "createdAt": "ISO date"
+}
+```
+
+### Adding Comments
+
+```bash
+# List comments for a spec
+curl http://localhost:3000/api/specs/:id/comments
+
+# Add a comment
+curl -X POST http://localhost:3000/api/specs/:id/comments \
+  -H 'Content-Type: application/json' \
+  -d '{"author": "System Analyst", "text": "Need to clarify error handling"}'
+
+# Resolve a comment
+curl -X PUT http://localhost:3000/api/specs/:id/comments/:commentId \
+  -H 'Content-Type: application/json' \
+  -d '{"resolved": true}'
+
+# Delete a comment
+curl -X DELETE http://localhost:3000/api/specs/:id/comments/:commentId
 ```
 
 ### Adding Edge Cases

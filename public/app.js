@@ -25,6 +25,7 @@ const state = {
   editorMode: 'edit',    // edit | preview | split
   saveTimer: null,
   saveStatus: '',
+  showResolved: false,
   config: {}
 };
 
@@ -58,6 +59,8 @@ const icons = {
   minus: '<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   table: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>',
   externalLink: '<svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+  comment: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -441,9 +444,11 @@ function renderEditor() {
 
   // Tabs
   const tabs = el('div', { className: 'editor-tabs' });
+  const commentCount = (spec.comments || []).filter(c => !c.resolved).length;
   for (const tab of [
     { key: 'content', label: 'Content' },
     { key: 'edgecases', label: `Edge Cases (${(spec.edgeCases || []).length})` },
+    { key: 'comments', label: `Comments${commentCount > 0 ? ' (' + commentCount + ')' : ''}` },
     { key: 'export', label: 'Export' }
   ]) {
     tabs.appendChild(el('button', {
@@ -460,6 +465,8 @@ function renderEditor() {
     body.appendChild(renderEditorContent());
   } else if (state.editorTab === 'edgecases') {
     body.appendChild(renderEdgeCases());
+  } else if (state.editorTab === 'comments') {
+    body.appendChild(renderComments());
   } else if (state.editorTab === 'export') {
     body.appendChild(renderExport());
   }
@@ -753,6 +760,95 @@ async function cycleEcStatus(ec) {
   ec.status = order[(idx + 1) % order.length];
   autoSave();
   render();
+}
+
+// ─── Comments Tab ───────────────────────────────────────────────────────────
+
+function renderComments() {
+  const panel = el('div', { className: 'comments-panel' });
+  const spec = state.editingSpec;
+  if (!spec.comments) spec.comments = [];
+
+  // Filter toggle
+  const filterRow = el('div', { className: 'comments-filter' });
+  const showResolvedId = 'show-resolved-' + Date.now();
+  const checkbox = el('input', { type: 'checkbox', id: showResolvedId });
+  if (state.showResolved) checkbox.checked = true;
+  checkbox.addEventListener('change', () => { state.showResolved = checkbox.checked; render(); });
+  filterRow.appendChild(checkbox);
+  filterRow.appendChild(el('label', { for: showResolvedId, style: { color: 'var(--text-muted)', fontSize: '0.85rem', cursor: 'pointer' } }, 'Show resolved'));
+  panel.appendChild(filterRow);
+
+  // List
+  const list = el('div', { className: 'comments-list' });
+  const filtered = state.showResolved ? spec.comments : spec.comments.filter(c => !c.resolved);
+
+  for (const c of filtered) {
+    const item = el('div', { className: `comment-item${c.resolved ? ' resolved' : ''}` });
+
+    const header = el('div', { className: 'comment-header' });
+    header.appendChild(el('span', { className: 'comment-author' }, c.author || 'User'));
+    header.appendChild(el('span', { className: 'comment-time' }, timeAgo(c.createdAt)));
+    item.appendChild(header);
+
+    item.appendChild(el('div', { className: 'comment-text' }, c.text));
+
+    const actions = el('div', { className: 'comment-actions' });
+    actions.appendChild(el('button', {
+      className: `btn-icon btn-icon-sm${c.resolved ? ' comment-resolved-btn' : ''}`,
+      innerHTML: icons.check,
+      title: c.resolved ? 'Unresolve' : 'Resolve',
+      onClick: async () => {
+        try {
+          await api('PUT', `/api/specs/${spec.id}/comments/${c.id}`, { resolved: !c.resolved });
+          c.resolved = !c.resolved;
+          render();
+          toast(c.resolved ? 'Comment resolved' : 'Comment unresolved', 'success');
+        } catch { toast('Failed to update comment', 'error'); }
+      }
+    }));
+    actions.appendChild(el('button', {
+      className: 'btn-icon btn-icon-sm',
+      innerHTML: icons.trash,
+      onClick: async () => {
+        try {
+          await api('DELETE', `/api/specs/${spec.id}/comments/${c.id}`);
+          spec.comments = spec.comments.filter(x => x.id !== c.id);
+          render();
+          toast('Comment deleted', 'success');
+        } catch { toast('Failed to delete comment', 'error'); }
+      }
+    }));
+    item.appendChild(actions);
+    list.appendChild(item);
+  }
+
+  if (filtered.length === 0) {
+    list.appendChild(el('div', { className: 'kanban-empty', style: { padding: '40px' } }, 'No comments yet.'));
+  }
+  panel.appendChild(list);
+
+  // Add form
+  const form = el('div', { className: 'comment-add-form' });
+  const textarea = el('textarea', { placeholder: 'Add a comment...', id: 'comment-new-input', rows: '3' });
+  form.appendChild(textarea);
+  form.appendChild(el('button', {
+    className: 'btn btn-primary btn-sm',
+    innerHTML: icons.comment + ' Add Comment',
+    onClick: async () => {
+      const text = document.getElementById('comment-new-input').value.trim();
+      if (!text) return;
+      try {
+        const comment = await api('POST', `/api/specs/${spec.id}/comments`, { text });
+        spec.comments.push(comment);
+        render();
+        toast('Comment added', 'success');
+      } catch { toast('Failed to add comment', 'error'); }
+    }
+  }));
+  panel.appendChild(form);
+
+  return panel;
 }
 
 // ─── Export Tab ──────────────────────────────────────────────────────────────
